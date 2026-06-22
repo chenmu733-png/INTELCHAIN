@@ -1,11 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowDownLeft, ArrowUpRight, Download } from 'lucide-react';
-import { buildPortfolio } from '@/lib/demo';
+import { fetchWalletTransfers } from '@/lib/api';
 import { usd } from '@/lib/format';
 import { Card, CardTitle } from '@/components/ui/Card';
 import DataTable from '@/components/ui/DataTable';
+import AddressSearch from '@/components/wallet/AddressSearch';
+import TokenIcon from '@/components/TokenIcon';
+import Skeleton from '@/components/ui/Skeleton';
 
 function toCSV(rows) {
   const head = ['direction', 'token', 'amount', 'value', 'counterparty', 'time'];
@@ -25,15 +30,21 @@ function download(name, content, type) {
   URL.revokeObjectURL(url);
 }
 
-export default function TransactionsPage() {
+function TransactionsView() {
+  const params = useSearchParams();
+  const router = useRouter();
+  const address = params.get('address') || '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
   const [dir, setDir] = useState('all');
-  const all = useMemo(() => {
-    // aggregate a richer set from several seeds
-    return ['alpha', 'beta', 'gamma', 'delta', 'omega']
-      .flatMap((s) => buildPortfolio(s).txs)
-      .sort((a, b) => b.time - a.time);
-  }, []);
 
+  const tx = useQuery({
+    queryKey: ['transfers', address],
+    queryFn: () => fetchWalletTransfers(address),
+    retry: 1
+  });
+  const all = useMemo(
+    () => [...(tx.data?.txs || [])].sort((a, b) => b.time - a.time),
+    [tx.data]
+  );
   const rows = useMemo(
     () => (dir === 'all' ? all : all.filter((t) => t.direction === dir)),
     [all, dir]
@@ -50,7 +61,16 @@ export default function TransactionsPage() {
         </span>
       )
     },
-    { key: 'token', header: 'Token' },
+    {
+      key: 'token',
+      header: 'Token',
+      render: (t) => (
+        <span className="flex items-center gap-2">
+          <TokenIcon symbol={t.token} size={18} />
+          {t.token}
+        </span>
+      )
+    },
     { key: 'amount', header: 'Amount', align: 'right', render: (t) => t.amount.toLocaleString() },
     { key: 'value', header: 'Value', align: 'right', render: (t) => usd(t.value) },
     { key: 'counterparty', header: 'Counterparty', hideMobile: true },
@@ -67,8 +87,14 @@ export default function TransactionsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight">Transactions</h1>
-        <p className="mt-1 text-sm text-gray-400">Incoming and outgoing transfers with filter, search, and export.</p>
+        <p className="mt-1 break-all text-sm text-gray-400">{address}</p>
       </div>
+
+      <AddressSearch
+        value={address}
+        placeholder="Enter wallet address to view transfers\u2026"
+        onSubmit={(a) => router.push(`/transactions?address=${a}`)}
+      />
 
       <Card>
         <CardTitle
@@ -104,14 +130,37 @@ export default function TransactionsPage() {
         >
           {rows.length} transfers
         </CardTitle>
-        <DataTable
-          columns={cols}
-          rows={rows}
-          searchKeys={['token', 'counterparty']}
-          initialSort={{ key: 'time', dir: 'desc' }}
-          pageSize={15}
-        />
+        {tx.isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="py-8 text-center text-sm text-gray-500">No transfers found.</p>
+        ) : (
+          <DataTable
+            columns={cols}
+            rows={rows}
+            searchKeys={['token', 'counterparty']}
+            initialSort={{ key: 'time', dir: 'desc' }}
+            pageSize={15}
+          />
+        )}
       </Card>
+      {tx.data?.source === 'demo' && (
+        <p className="text-center text-xs text-gray-600">
+          Showing representative transfers. Set COVALENT_API_KEY for live on-chain data.
+        </p>
+      )}
     </div>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+      <TransactionsView />
+    </Suspense>
   );
 }
