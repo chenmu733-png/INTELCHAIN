@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { ArrowDownLeft, ArrowUpRight, ShieldAlert } from 'lucide-react';
 import { buildPortfolio, riskLabel } from '@/lib/demo';
-import { fetchWallet } from '@/lib/api';
+import { fetchWallet, fetchWalletTransfers } from '@/lib/api';
 import { usd, pct } from '@/lib/format';
 import { Card, CardTitle } from '@/components/ui/Card';
 import DataTable from '@/components/ui/DataTable';
@@ -21,14 +21,20 @@ export default function PortfolioView({ seed, live = false }) {
     enabled: live,
     retry: 1
   });
-  // Merge: live data fills what the provider returns; demo fills the rest
-  // (history/txs are demo until a transfers API is wired in).
+  const transfers = useQuery({
+    queryKey: ['wallet-transfers', seed],
+    queryFn: () => fetchWalletTransfers(seed),
+    enabled: live,
+    retry: 1
+  });
+  // Merge: live data fills what the provider returns; demo fills the rest.
   const data = live && query.data ? query.data : fallback;
+  const liveTxs = live && transfers.data?.txs?.length ? transfers.data.txs : null;
   const p = {
     ...fallback,
     ...data,
     history: data.history?.length ? data.history : fallback.history,
-    txs: data.txs?.length ? data.txs : fallback.txs
+    txs: liveTxs || (data.txs?.length ? data.txs : fallback.txs)
   };
   const risk = riskLabel(p.riskScore || fallback.riskScore);
 
