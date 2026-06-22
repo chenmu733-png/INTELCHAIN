@@ -18,6 +18,29 @@ async function getJSON(url, headers = {}) {
   return res.json();
 }
 
+// Covalent / GoldRush: historical portfolio value (30 days).
+async function covalentHistory(address, key) {
+  try {
+    const url = `https://api.covalenthq.com/v1/eth-mainnet/address/${address}/portfolio_v2/?key=${key}`;
+    const data = await getJSON(url);
+    const items = data?.data?.items || [];
+    // Sum USD value per day across all holdings.
+    const byDay = {};
+    for (const token of items) {
+      for (const point of token.holdings || []) {
+        const t = new Date(point.timestamp).getTime();
+        const v = point.close?.quote || 0;
+        byDay[t] = (byDay[t] || 0) + v;
+      }
+    }
+    return Object.entries(byDay)
+      .map(([t, price]) => ({ t: Number(t), price: Math.round(price) }))
+      .sort((a, b) => a.t - b.t);
+  } catch {
+    return [];
+  }
+}
+
 // Covalent / GoldRush: token balances on Ethereum mainnet (chain 1).
 async function fromCovalent(address, key) {
   const url = `https://api.covalenthq.com/v1/eth-mainnet/address/${address}/balances_v2/?key=${key}`;
@@ -45,6 +68,8 @@ async function fromCovalent(address, key) {
     .slice(0, 6)
     .map((h) => ({ name: h.symbol, value: Math.round((h.value / sum) * 100) }));
 
+  const history = await covalentHistory(address, key);
+
   return {
     source: 'covalent',
     address,
@@ -54,7 +79,7 @@ async function fromCovalent(address, key) {
     holdings,
     allocation,
     chains: [{ name: 'Ethereum', value: 100 }],
-    history: [],
+    history,
     txs: []
   };
 }

@@ -1,6 +1,7 @@
 import './globals.css';
 import Providers from '@/components/Providers';
 import AppShell from '@/components/layout/AppShell';
+import ServiceWorker from '@/components/ServiceWorker';
 
 export const metadata = {
   title: 'INTELCHAIN — Follow Money. Understand Everything.',
@@ -30,6 +31,7 @@ export default function RootLayout({ children }) {
         <Providers>
           <AppShell>{children}</AppShell>
         </Providers>
+        <ServiceWorker />
       </body>
     </html>
   );

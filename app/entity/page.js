@@ -65,7 +65,7 @@ function EntityView() {
         ))}
       </div>
 
-      {tab === 'Portfolio' && <PortfolioView seed={name} />}
+      {tab === 'Portfolio' && <PortfolioView seed={name} live />}
       {tab !== 'Portfolio' && (
         <div className="glass rounded-2xl p-10 text-center text-sm text-gray-500">
           {tab} module \u2014 powered by the same data layer as Portfolio. Wire in
