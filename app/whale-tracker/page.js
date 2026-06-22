@@ -6,6 +6,7 @@ import { ArrowDownLeft, ArrowUpRight, Repeat, Zap, Radio } from 'lucide-react';
 import { subscribeWhales } from '@/lib/whaleFeed';
 import { usd } from '@/lib/format';
 import { Card, CardTitle } from '@/components/ui/Card';
+import TokenIcon from '@/components/TokenIcon';
 
 const FILTERS = ['All', 'Transfer', 'Exchange Inflow', 'Exchange Outflow', 'Large Trade'];
 
@@ -114,6 +115,7 @@ export default function WhaleTrackerPage() {
               >
                 <div className="flex min-w-0 items-center gap-2">
                   {typeIcon(e.type)}
+                  <TokenIcon symbol={e.token} size={20} />
                   <div className="min-w-0">
                     <p className="truncate text-sm">
                       <span className="font-semibold">{e.amount.toLocaleString()} {e.token}</span>{' '}

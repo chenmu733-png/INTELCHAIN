@@ -9,6 +9,7 @@ import { Card, CardTitle } from '@/components/ui/Card';
 import DataTable from '@/components/ui/DataTable';
 import LineChart from '@/components/charts/LineChart';
 import PieChart from '@/components/charts/PieChart';
+import TokenIcon from '@/components/TokenIcon';
 
 export default function PortfolioView({ seed }) {
   const p = useMemo(() => buildPortfolio(seed), [seed]);
@@ -18,7 +19,12 @@ export default function PortfolioView({ seed }) {
     {
       key: 'symbol',
       header: 'Asset',
-      render: (h) => <span className="font-medium">{h.symbol}</span>
+      render: (h) => (
+        <span className="flex items-center gap-2 font-medium">
+          <TokenIcon symbol={h.symbol} size={20} />
+          {h.symbol}
+        </span>
+      )
     },
     { key: 'amount', header: 'Amount', align: 'right', render: (h) => h.amount.toLocaleString() },
     { key: 'price', header: 'Price', align: 'right', render: (h) => usd(h.price, { compact: false }) },
@@ -45,7 +51,16 @@ export default function PortfolioView({ seed }) {
         </span>
       )
     },
-    { key: 'token', header: 'Token' },
+    {
+      key: 'token',
+      header: 'Token',
+      render: (t) => (
+        <span className="flex items-center gap-2">
+          <TokenIcon symbol={t.token} size={18} />
+          {t.token}
+        </span>
+      )
+    },
     { key: 'amount', header: 'Amount', align: 'right', render: (t) => t.amount.toLocaleString() },
     { key: 'value', header: 'Value', align: 'right', render: (t) => usd(t.value) },
     { key: 'counterparty', header: 'Counterparty', hideMobile: true },
