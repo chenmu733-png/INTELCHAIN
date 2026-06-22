@@ -6,7 +6,8 @@
 
 import { buildPortfolio } from '@/lib/demo';
 
-export const revalidate = 30;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 async function getJSON(url) {
   const res = await fetch(url, { headers: { accept: 'application/json' } });

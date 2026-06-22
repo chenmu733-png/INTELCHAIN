@@ -10,7 +10,10 @@
 
 import { buildPortfolio } from '@/lib/demo';
 
-export const revalidate = 30;
+// Ensure the route always runs on the server at request time so env vars
+// (COVALENT_API_KEY) are read correctly and never baked in at build time.
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 async function getJSON(url, headers = {}) {
   const res = await fetch(url, { headers: { accept: 'application/json', ...headers } });
@@ -90,17 +93,28 @@ export async function GET(request) {
 
   const covalentKey = process.env.COVALENT_API_KEY;
   const isEvm = /^0x[a-fA-F0-9]{40}$/.test(address);
+  const debug = searchParams.get('debug') === '1';
+
+  // Diagnostics: explain why a request falls back to demo data.
+  let reason = null;
+  if (!covalentKey) reason = 'COVALENT_API_KEY not set on server';
+  else if (!isEvm) reason = 'address is not a valid EVM address (0x + 40 hex)';
 
   if (covalentKey && isEvm) {
     try {
       const data = await fromCovalent(address, covalentKey);
-      return Response.json(data);
+      return Response.json(debug ? { ...data, debug: { keyPresent: true } } : data);
     } catch (e) {
-      // fall through to demo on provider error
+      reason = `covalent error: ${String(e.message || e)}`;
     }
   }
 
   // Demo fallback (deterministic per address seed).
   const demo = buildPortfolio(address || 'intelchain');
-  return Response.json({ source: 'demo', address, ...demo });
+  return Response.json({
+    source: 'demo',
+    address,
+    ...demo,
+    ...(debug ? { debug: { keyPresent: Boolean(covalentKey), isEvm, reason } } : {})
+  });
 }
