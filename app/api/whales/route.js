@@ -10,6 +10,28 @@ import { makeWhaleEvent } from '@/lib/whaleSim';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// Fetch a symbol -> USD price map from CoinGecko (top markets by cap).
+async function priceMap() {
+  try {
+    const res = await fetch(
+      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1',
+      { headers: { accept: 'application/json' }, next: { revalidate: 60 } }
+    );
+    if (!res.ok) return {};
+    const data = await res.json();
+    const map = {};
+    for (const c of data) {
+      if (c.symbol && c.current_price) map[c.symbol.toUpperCase()] = c.current_price;
+    }
+    // Common wrapped/stable aliases.
+    if (map.WETH == null && map.ETH != null) map.WETH = map.ETH;
+    if (map.WBTC == null && map.BTC != null) map.WBTC = map.BTC;
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 async function rpc(url, method, params) {
   const res = await fetch(url, {
     method: 'POST',
@@ -49,11 +71,15 @@ async function fromAlchemy(key) {
   ]);
 
   const transfers = result?.transfers || [];
+  const prices = await priceMap();
+
   return transfers
     .filter((t) => t.value && Number(t.value) > 0)
     .map((t) => {
       const token = (t.asset || 'ETH').toUpperCase();
       const amount = Number(t.value);
+      const price = prices[token];
+      const usdValue = price ? Math.round(amount * price) : null;
       const ts = t.metadata?.blockTimestamp
         ? new Date(t.metadata.blockTimestamp).getTime()
         : Date.now();
@@ -62,12 +88,13 @@ async function fromAlchemy(key) {
         type: classify(t.from, t.to),
         token,
         amount: +amount.toFixed(4),
-        usdValue: null, // priced client-side via market data when available
+        usdValue,
         from: t.from ? `${t.from.slice(0, 8)}\u2026${t.from.slice(-4)}` : 'Unknown',
         to: t.to ? `${t.to.slice(0, 8)}\u2026${t.to.slice(-4)}` : 'Unknown',
         time: ts
       };
-    });
+    })
+    .sort((a, b) => (b.usdValue || 0) - (a.usdValue || 0));
 }
 
 export async function GET(request) {
