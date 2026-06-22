@@ -1,4 +1,4 @@
-// DEX analytics via free DefiLlama (TVL) + DexScreener (pairs). No API key.
+// DEX analytics via free DefiLlama (TVL) + DexScreener (top pairs). No API key.
 export const revalidate = 60;
 
 async function getJSON(url) {
@@ -9,7 +9,6 @@ async function getJSON(url) {
 
 export async function GET() {
   try {
-    // Top DEX protocols by TVL
     const protocols = await getJSON('https://api.llama.fi/protocols');
     const dexes = (protocols || [])
       .filter((p) => p.category === 'Dexes')
@@ -23,8 +22,28 @@ export async function GET() {
         change1d: p.change_1d ?? null,
         change7d: p.change_7d ?? null
       }));
-    return Response.json({ dexes });
+
+    // Top trending pairs from DexScreener (best-effort; non-fatal on failure).
+    let pairs = [];
+    try {
+      const ds = await getJSON('https://api.dexscreener.com/latest/dex/search?q=ETH');
+      pairs = (ds?.pairs || [])
+        .filter((p) => p.liquidity?.usd)
+        .sort((a, b) => (b.liquidity.usd || 0) - (a.liquidity.usd || 0))
+        .slice(0, 12)
+        .map((p) => ({
+          id: p.pairAddress,
+          name: `${p.baseToken?.symbol}/${p.quoteToken?.symbol}`,
+          dex: p.dexId,
+          chain: p.chainId,
+          priceUsd: p.priceUsd ? Number(p.priceUsd) : null,
+          liquidity: Math.round(p.liquidity.usd || 0),
+          volume24h: Math.round(p.volume?.h24 || 0)
+        }));
+    } catch {}
+
+    return Response.json({ dexes, pairs });
   } catch (e) {
-    return Response.json({ error: String(e.message || e), dexes: [] }, { status: 502 });
+    return Response.json({ error: String(e.message || e), dexes: [], pairs: [] }, { status: 502 });
   }
 }
