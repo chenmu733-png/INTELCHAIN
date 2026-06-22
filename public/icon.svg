@@ -1,4 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#05070a"/>
-  <text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="Inter, sans-serif" font-size="190" font-weight="800" fill="#22e584">IC</text>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22e584"/>
+      <stop offset="1" stop-color="#16c474"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#05070a"/>
+  <circle cx="256" cy="256" r="168" fill="#0a0d12" stroke="url(#g)" stroke-width="24"/>
+  <circle cx="256" cy="256" r="120" stroke="url(#g)" stroke-width="12" stroke-opacity="0.4"/>
+  <g stroke="url(#g)" stroke-width="26" stroke-linecap="round" fill="none">
+    <rect x="150" y="206" width="110" height="92" rx="46" transform="rotate(-30 150 206)"/>
+    <rect x="222" y="206" width="110" height="92" rx="46" transform="rotate(-30 222 206)"/>
+  </g>
 </svg>
