@@ -2,23 +2,20 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
 import { fetchMarkets, fetchGlobal } from '@/lib/api';
+import { usd, pct } from '@/lib/format';
 import { Card, CardTitle } from '@/components/ui/Card';
 import Skeleton from '@/components/ui/Skeleton';
 import StatCard from '@/components/dashboard/StatCard';
 
-function usd(n) {
-  if (n == null) return '—';
-  if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
-  return `$${Number(n).toLocaleString()}`;
-}
-
 export default function HomePage() {
-  const markets = useQuery({ queryKey: ['markets'], queryFn: fetchMarkets });
-  const global = useQuery({ queryKey: ['global'], queryFn: fetchGlobal });
+  const markets = useQuery({
+    queryKey: ['markets', 100],
+    queryFn: () => fetchMarkets(100),
+    retry: 2
+  });
+  const global = useQuery({ queryKey: ['global'], queryFn: fetchGlobal, retry: 2 });
   const g = global.data;
   const coins = markets.data || [];
 
@@ -47,6 +44,22 @@ export default function HomePage() {
         </p>
       </section>
 
+      {(markets.isError || global.isError) && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+          <AlertTriangle size={16} />
+          Live data is rate-limited right now. Retrying automatically\u2026
+          <button
+            onClick={() => {
+              markets.refetch();
+              global.refetch();
+            }}
+            className="ml-auto rounded-md border border-amber-400/40 px-2 py-1 text-xs hover:bg-amber-400/10"
+          >
+            Retry now
+          </button>
+        </div>
+      )}
+
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
           label="Total Market Cap"
@@ -60,12 +73,12 @@ export default function HomePage() {
         />
         <StatCard
           label="BTC Dominance"
-          value={g ? `${g.market_cap_percentage?.btc?.toFixed(1)}%` : '—'}
+          value={g ? `${g.market_cap_percentage?.btc?.toFixed(1)}%` : '\u2014'}
           loading={global.isLoading}
         />
         <StatCard
           label="Active Coins"
-          value={g ? g.active_cryptocurrencies?.toLocaleString() : '—'}
+          value={g ? g.active_cryptocurrencies?.toLocaleString() : '\u2014'}
           loading={global.isLoading}
         />
       </section>
@@ -81,8 +94,10 @@ export default function HomePage() {
             </div>
           ) : markets.isError ? (
             <p className="py-8 text-center text-sm text-gray-500">
-              Live data unavailable. Showing cached experience.
+              Live data unavailable. Please retry.
             </p>
+          ) : coins.length === 0 ? (
+            <p className="py-8 text-center text-sm text-gray-500">No data.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -109,9 +124,9 @@ export default function HomePage() {
                             <span className="hidden text-gray-500 sm:inline">{c.name}</span>
                           </div>
                         </td>
-                        <td className="py-2.5 text-right">{usd(c.current_price)}</td>
+                        <td className="py-2.5 text-right">{usd(c.current_price, { compact: false })}</td>
                         <td className={`py-2.5 text-right ${up ? 'text-neon' : 'text-red-400'}`}>
-                          {(c.price_change_percentage_24h || 0).toFixed(2)}%
+                          {pct(c.price_change_percentage_24h)}
                         </td>
                         <td className="hidden py-2.5 text-right text-gray-400 md:table-cell">
                           {usd(c.market_cap)}
@@ -148,7 +163,7 @@ export default function HomePage() {
                     </div>
                     <span className={`flex items-center gap-1 text-xs ${up ? 'text-neon' : 'text-red-400'}`}>
                       {up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                      {(c.price_change_percentage_24h || 0).toFixed(1)}%
+                      {pct(c.price_change_percentage_24h)}
                     </span>
                   </li>
                 );
