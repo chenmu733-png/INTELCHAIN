@@ -22,7 +22,7 @@ function WalletView() {
         placeholder="Enter wallet address or ENS\u2026"
         onSubmit={(a) => router.push(`/wallet?address=${a}`)}
       />
-      <PortfolioView seed={address} />
+      <PortfolioView seed={address} live />
     </div>
   );
 }
