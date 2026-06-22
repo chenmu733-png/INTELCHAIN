@@ -1,9 +1,11 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { ArrowDownLeft, ArrowUpRight, ShieldAlert } from 'lucide-react';
 import { buildPortfolio, riskLabel } from '@/lib/demo';
+import { fetchWallet } from '@/lib/api';
 import { usd, pct } from '@/lib/format';
 import { Card, CardTitle } from '@/components/ui/Card';
 import DataTable from '@/components/ui/DataTable';
@@ -11,9 +13,24 @@ import LineChart from '@/components/charts/LineChart';
 import PieChart from '@/components/charts/PieChart';
 import TokenIcon from '@/components/TokenIcon';
 
-export default function PortfolioView({ seed }) {
-  const p = useMemo(() => buildPortfolio(seed), [seed]);
-  const risk = riskLabel(p.riskScore);
+export default function PortfolioView({ seed, live = false }) {
+  const fallback = useMemo(() => buildPortfolio(seed), [seed]);
+  const query = useQuery({
+    queryKey: ['wallet', seed],
+    queryFn: () => fetchWallet(seed),
+    enabled: live,
+    retry: 1
+  });
+  // Merge: live data fills what the provider returns; demo fills the rest
+  // (history/txs are demo until a transfers API is wired in).
+  const data = live && query.data ? query.data : fallback;
+  const p = {
+    ...fallback,
+    ...data,
+    history: data.history?.length ? data.history : fallback.history,
+    txs: data.txs?.length ? data.txs : fallback.txs
+  };
+  const risk = riskLabel(p.riskScore || fallback.riskScore);
 
   const holdingCols = [
     {
