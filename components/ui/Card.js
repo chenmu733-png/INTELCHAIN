@@ -1,14 +1,58 @@
-export function Card({ className = '', children }) {
+'use client';
+
+export function Card({ className = '', children, ...props }) {
   return (
-    <div className={`glass rounded-2xl p-4 ${className}`}>{children}</div>
+    <div
+      className={`card-base transition-smooth ${className}`}
+      {...props}
+    >
+      {children}
+    </div>
   );
 }
 
-export function CardTitle({ children, action }) {
+export function CardTitle({ className = '', children, ...props }) {
   return (
-    <div className="mb-3 flex items-center justify-between">
-      <h3 className="text-sm font-semibold text-gray-200">{children}</h3>
-      {action}
+    <h2
+      className={`mb-4 text-lg font-bold text-white md:text-xl ${className}`}
+      {...props}
+    >
+      {children}
+    </h2>
+  );
+}
+
+export function CardDescription({ className = '', children, ...props }) {
+  return (
+    <p
+      className={`text-sm text-gray-400 ${className}`}
+      {...props}
+    >
+      {children}
+    </p>
+  );
+}
+
+export function CardContent({ className = '', children, ...props }) {
+  return (
+    <div className={`space-y-4 ${className}`} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export function CardHeader({ className = '', children, ...props }) {
+  return (
+    <div className={`border-b border-white/5 pb-4 ${className}`} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export function CardFooter({ className = '', children, ...props }) {
+  return (
+    <div className={`border-t border-white/5 pt-4 ${className}`} {...props}>
+      {children}
     </div>
   );
 }
